@@ -81,8 +81,9 @@ source(here::here("src", "libraries.R"))
 Beta_div_Ordination <- function(data_path, file_name) {
 
     # Load phyloseq object
-    load(here::here(data_path, file_name))
-   
+    loaded_name <- load(here::here(data_path, file_name))
+    ps <- get(loaded_name)
+    
     # Data processing pipeline
     exclude_groups <-  c("Roots_Carex_OSPW",
                          "Sediments_No_plant_Artificial_OSPW",
@@ -154,10 +155,12 @@ Beta_div_Ordination <- function(data_path, file_name) {
 source(here::here("src", "libraries.R"))
 
 # Process all datasets
-Bac_solid <- Beta_div_Ordination("data/16s_sed/", "ps_16S_Sed.RData")
-Bac_water <- Beta_div_Ordination("data/16s_wat/", "ps_16S_Wat.RData")
+Bac_solid <- Beta_div_Ordination("data/16s_sed/", "ps_Bac_Sed.RData")
+Bac_water <- Beta_div_Ordination("data/16s_wat/", "ps_Bac_Wat.RData")
 Fun_solid <- Beta_div_Ordination("data/its_sed/", "ps_fungi.RData")
 Euk_water <- Beta_div_Ordination("data/18s_wat/", "ps_18S_Wat.RData")
+
+
 
 # Arrange all the figures in one plot
 Beta_stype <- ggarrange(plot(Bac_solid$plot_stype),
@@ -179,7 +182,8 @@ source(here::here("src", "libraries.R"))
 Relative_Abundance <- function(data_path, file_name,label,dataset) {
     
     # Load phyloseq object
-    load(here::here(data_path, file_name))
+    loaded_name <- load(here::here(data_path, file_name))
+    ps <- get(loaded_name)
     
     # Data processing pipeline
     exclude_groups <-  c("Roots_Carex_OSPW",
@@ -263,7 +267,7 @@ Relative_Abundance <- function(data_path, file_name,label,dataset) {
     levels(ps_mean_top[[tax_lvl]])
     
     # Bac Water
-    if (file_name == "ps_16S_Wat.RData") {
+    if (file_name == "ps_Bac_Wat.RData") {
         Class=c("#61a5c2","#003049","#d62828","#f77f00","#fcbf49",
                 "#b8f2e6","#00a5cf","#7ae582","#aacc00","#dddf00",
                 "#d38b5d","#e26d5c","#ffe1a8","#b56576",
@@ -276,7 +280,7 @@ Relative_Abundance <- function(data_path, file_name,label,dataset) {
    #              "#81F2a3", "#8b328a","beige","grey40")
    # 
     
-    } else if (file_name == "ps_16S_Sed.RData") {
+    } else if (file_name == "ps_Bac_Sed.RData") {
         Class=c("#003049","#d62828","#f77f00","#fcbf49","#eae2b7",
                 "#00a5cf","#7ae582","#2c5530","#739e82","#d38b5d",
                 "#99621e","#b56576","#9d4edd","#5a189a",
@@ -330,8 +334,8 @@ Relative_Abundance <- function(data_path, file_name,label,dataset) {
 
 
 
-Bac_solid <- Relative_Abundance("data/16s_sed/", "ps_16S_Sed.RData","Bacteria","Sediments")
-Bac_water <- Relative_Abundance("data/16s_wat/", "ps_16S_Wat.RData","Bacteria","Water")
+Bac_solid <- Relative_Abundance("data/16s_sed/", "ps_Bac_Sed.RData","Bacteria","Sediments")
+Bac_water <- Relative_Abundance("data/16s_wat/", "ps_Bac_Wat.RData","Bacteria","Water")
 Fun_solid <- Relative_Abundance("data/its_sed/", "ps_fungi.RData","Fungi","Sediments")
 Euk_water <- Relative_Abundance("data/18s_wat/", "ps_18S_Wat.RData","Eukaryotes","Water")
 
@@ -354,7 +358,9 @@ ggsave(Relab_plot,device='svg',height = 15, width = 15 ,
 
 Cor_taxa <- function(data_path, file_name,taxa,taxo_lvl) {
     
-    load(here::here(data_path, file_name))
+    # Load phyloseq object
+    loaded_name <- load(here::here(data_path, file_name))
+    ps <- get(loaded_name)
     
     metadata <- read.csv(file = paste0(data_path,"/NA_predict.csv"), 
                          dec = ".", header = T, row.names = 1, sep = ";", 
@@ -518,10 +524,10 @@ ggsave(Figure_4,device='svg',height = 20, width = 20 ,
 
 source(here::here("src", "libraries.R"))
 data_path <- here("data/16s_sed/")
-load(here(data_path,"ps_16S_Sed.RData"))
+load(here(data_path,"ps_Bac_Sed.RData"))
 
 data_path <- here("data/16s_wat/")
-load(here(data_path,"ps_16S_Wat.RData"))
+load(here(data_path,"ps_Bac_Wat.RData"))
 
 data_path <- here("data/its_sed/")
 load(here(data_path,"ps_fungi.RData"))
@@ -529,8 +535,10 @@ load(here(data_path,"ps_fungi.RData"))
 
 Community_change <- function(data_path, file_name,tax_lvl,Stype) {
 
-load(here::here(data_path, file_name))
-    
+# Load phyloseq object
+loaded_name <- load(here::here(data_path, file_name))
+ps <- get(loaded_name)    
+
 ps_glom <- tax_glom(ps,taxrank=tax_lvl,NArm = F)
 
 Sdate1 <- "D-0"# Analogous to control (Will be on the left side of the volcano)
@@ -600,7 +608,7 @@ labels <- res2_taxa[[tax_lvl]]
 labels_noNA <- labels[labels!="NA"]
 
 
-if (file_name=="ps_16S_Sed.RData"){ 
+if (file_name=="ps_Bac_Sed.RData"){ 
     if (Stype=="Rhizosphere_Carex_OSPW"){
     Fig_title <- "Carex rhizosphere - Bacteria"
     
@@ -620,7 +628,7 @@ if (file_name=="ps_16S_Sed.RData"){
     } else if(Stype=="Sediments_No_plant_OSPW"){
         Fig_title <- "Unplanted sediments - Fungi"}
         
-} else if(file_name=="ps_16S_Wat.RData"){ 
+} else if(file_name=="ps_Bac_Wat.RData"){ 
     if (Stype=="Carex_OSPW"){
         Fig_title <- "Carex OSPW - Bacteria"
         
@@ -661,18 +669,18 @@ volcano_plot<- EnhancedVolcano(res2_taxa,
 }
 
 ### Bac in solid samples  ###
-Bac_rhizo <- Community_change("data/16s_sed/", "ps_16S_Sed.RData",
+Bac_rhizo <- Community_change("data/16s_sed/", "ps_Bac_Sed.RData",
                               tax_lvl = "Family",Stype = "Rhizosphere_Carex_OSPW")
 
-Bac_NoPlant <- Community_change("data/16s_sed/", "ps_16S_Sed.RData",
+Bac_NoPlant <- Community_change("data/16s_sed/", "ps_Bac_Sed.RData",
                                 tax_lvl = "Family",Stype = "Sediments_No_plant_OSPW")
 
 
 ### Bac in water column  ###
-Bac_Carex_OSPW <- Community_change("data/16s_wat/", "ps_16S_Wat.RData",
+Bac_Carex_OSPW <- Community_change("data/16s_wat/", "ps_Bac_Wat.RData",
                               tax_lvl = "Family",Stype = "Carex_OSPW")
 
-Bac_NoPlant_OSPW <- Community_change("data/16s_wat/", "ps_16S_Wat.RData",
+Bac_NoPlant_OSPW <- Community_change("data/16s_wat/", "ps_Bac_Wat.RData",
                               tax_lvl = "Family",Stype = "No_plant_OSPW")
 
 ### Fungi in solid samples ###
@@ -715,7 +723,9 @@ ggsave(Primary_response2,device='svg',height = 15, width = 15,
 #### Figure S1 to S8 - Alpha div ####
 Alpha.div.Stype <- function(data_path, file_name, rarefaction=FALSE) {
     
-    load(here::here(data_path, file_name))
+    # Load phyloseq object
+    loaded_name <- load(here::here(data_path, file_name))
+    ps <- get(loaded_name)
     
     exclude_groups <-  c("Sediments_No_plant_Artificial_OSPW",
                          "No_plant_Artificial_OSPW")
@@ -793,8 +803,8 @@ Alpha_div_plot <- ggarrange(Alpha_div,table,
                             ncol=2)
 
 }
-Sed_Bac_nonRar <- Alpha.div.Stype("data/16s_sed/", "ps_16S_Sed.RData",rarefaction=F)
-Sed_Bac_Rar <- Alpha.div.Stype("data/16s_sed/", "ps_16S_Sed.RData",rarefaction=T)
+Sed_Bac_nonRar <- Alpha.div.Stype("data/16s_sed/", "ps_Bac_Sed.RData",rarefaction=F)
+Sed_Bac_Rar <- Alpha.div.Stype("data/16s_sed/", "ps_Bac_Sed.RData",rarefaction=T)
 
 ggsave(Sed_Bac_nonRar,device='svg',height = 8, width = 12 ,
        filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Alpha_Bac_Sed.svg")
@@ -805,8 +815,8 @@ Sed_Fun_Rar <- Alpha.div.Stype("data/its_sed/", "ps_fungi.RData",rarefaction=T)
 ggsave(Sed_Fun_nonRar,device='svg',height = 8, width = 12,
        filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Alpha_Fun_Sed.svg")
 
-Wat_Bac_nonRar <- Alpha.div.Stype("data/16s_wat/", "ps_16S_Wat.RData",rarefaction=F)
-Wat_Bac_Rar <- Alpha.div.Stype("data/16s_wat/", "ps_16S_Wat.RData",rarefaction=T)
+Wat_Bac_nonRar <- Alpha.div.Stype("data/16s_wat/", "ps_Bac_Wat.RData",rarefaction=F)
+Wat_Bac_Rar <- Alpha.div.Stype("data/16s_wat/", "ps_Bac_Wat.RData",rarefaction=T)
 
 ggsave(Wat_Bac_nonRar,device='svg',height = 8, width = 12,
        filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Alpha_Bac_Wat.svg")
@@ -821,7 +831,8 @@ ggsave(Wat_Euk_nonRar,device='svg',height = 8, width = 12,
 
 Alpha.div.Time <- function(data_path, file_name, rarefaction=FALSE) {
     
-    load(here::here(data_path, file_name))
+    loaded_name <- load(here::here(data_path, file_name))
+    ps <- get(loaded_name)
     
     exclude_groups <-  c("Sediments_No_plant_Artificial_OSPW",
                          "No_plant_Artificial_OSPW")
@@ -906,8 +917,8 @@ Alpha.div.Time <- function(data_path, file_name, rarefaction=FALSE) {
 }
 
 
-Sed_Bac_nonRar <- Alpha.div.Time("data/16s_sed/", "ps_16S_Sed.RData",rarefaction=F)
-Sed_Bac_Rar <- Alpha.div.Time("data/16s_sed/", "ps_16S_Sed.RData",rarefaction=T)
+Sed_Bac_nonRar <- Alpha.div.Time("data/16s_sed/", "ps_Bac_Sed.RData",rarefaction=F)
+Sed_Bac_Rar <- Alpha.div.Time("data/16s_sed/", "ps_Bac_Sed.RData",rarefaction=T)
 
 ggsave(Sed_Bac_nonRar,device='svg',height = 8, width = 12 ,
        filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Alpha_Bac_Sed_Time.svg")
@@ -918,8 +929,8 @@ Sed_Fun_Rar <- Alpha.div.Time("data/its_sed/", "ps_fungi.RData",rarefaction=T)
 ggsave(Sed_Fun_nonRar,device='svg',height = 8, width = 12,
        filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Alpha_Fun_Sed_Time.svg")
 
-Wat_Bac_nonRar <- Alpha.div.Time("data/16s_wat/", "ps_16S_Wat.RData",rarefaction=F)
-Wat_Bac_Rar <- Alpha.div.Time("data/16s_wat/", "ps_16S_Wat.RData",rarefaction=T)
+Wat_Bac_nonRar <- Alpha.div.Time("data/16s_wat/", "ps_Bac_Wat.RData",rarefaction=F)
+Wat_Bac_Rar <- Alpha.div.Time("data/16s_wat/", "ps_Bac_Wat.RData",rarefaction=T)
 
 ggsave(Wat_Bac_nonRar,device='svg',height = 8, width = 12,
        filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Alpha_Bac_Wat_Time.svg")
@@ -937,7 +948,8 @@ ggsave(Wat_Euk_nonRar,device='svg',height = 8, width = 12,
 Beta_div_Ordination <- function(data_path, file_name) {
     
     # Load phyloseq object
-    load(here::here(data_path, file_name))
+    loaded_name <- load(here::here(data_path, file_name))
+    ps <- get(loaded_name)
     
     # Data processing pipeline
     exclude_groups <-  c("Sediments_No_plant_Artificial_OSPW",
@@ -1004,7 +1016,7 @@ Beta_div_Ordination <- function(data_path, file_name) {
 source(here::here("src", "libraries.R"))
 
 # Process all datasets
-Bac_solid <- Beta_div_Ordination("data/16s_sed/", "ps_16S_Sed.RData")
+Bac_solid <- Beta_div_Ordination("data/16s_sed/", "ps_Bac_Sed.RData")
 Fun_solid <- Beta_div_Ordination("data/its_sed/", "ps_fungi.RData")
 
 Bac_solid$plot_stype
@@ -1031,7 +1043,9 @@ ggsave(Fun_solid$plot_stype,device='svg',height = 10, width = 18 ,
 
 Change.over.time <- function(data_path, file_name,Group1,Group2) {
 
-load(here::here(data_path, file_name))
+    # Load phyloseq object
+    loaded_name <- load(here::here(data_path, file_name))
+    ps <- get(loaded_name)
 
 
 metadata <- sample_data(ps)
@@ -1152,7 +1166,7 @@ return(plot_list)
 }
 
 BacSolidCompTime <- Change.over.time(data_path="data/16s_sed/",
-                                     file_name="ps_16S_Sed.RData",
+                                     file_name="ps_Bac_Sed.RData",
                                      Group1="Sediments_No_plant_OSPW",
                                      Group2="Rhizosphere_Carex_OSPW")
 
@@ -1168,7 +1182,7 @@ ggsave(Bac_solid_Change_Time,device='svg', height = 15, width = 20,
 
 
 BacWaterCompTime <- Change.over.time(data_path="data/16s_wat/",
-                                     file_name="ps_16S_Wat.RData",
+                                     file_name="ps_Bac_Wat.RData",
                                      Group1="No_plant_OSPW",
                                      Group2="Carex_OSPW")
 
@@ -1217,7 +1231,8 @@ diff_ab_tax <- subset(tax,row.names(tax)%in%diff_ab_ASVs)
 Root_Relab_Abundance <- function(data_path, file_name,label,dataset) {
     
     # Load phyloseq object
-    load(here::here(data_path, file_name))
+    loaded_name <- load(here::here(data_path, file_name))
+    ps <- get(loaded_name)
     
     # Data processing pipeline
     Root_group <-  "Roots_Carex_OSPW"
@@ -1285,7 +1300,7 @@ Root_Relab_Abundance <- function(data_path, file_name,label,dataset) {
     levels(ps_mean_top[[tax_lvl]])
     
     # Bac Water
-    if (file_name == "ps_16S_Sed.RData") {
+    if (file_name == "ps_Bac_Sed.RData") {
         Class=c("#003049","#d62828","#f77f00","#fcbf49","#eae2b7",
                 "#00a5cf","#7ae582","#aacc00","#2c5530","#BED981",
                 "#739e82","#d38b5d","#99621e","#F9DCEB",
@@ -1332,5 +1347,5 @@ Root_Relab_Abundance <- function(data_path, file_name,label,dataset) {
     
 }
 
-Root_Bac <- Root_Relab_Abundance("data/16s_sed/", "ps_16S_Sed.RData","Bacteria","Sediments")
+Root_Bac <- Root_Relab_Abundance("data/16s_sed/", "ps_Bac_Sed.RData","Bacteria","Sediments")
 Root_Fun <- Root_Relab_Abundance("data/its_sed/", "ps_fungi.RData","Fungi","Sediments")
