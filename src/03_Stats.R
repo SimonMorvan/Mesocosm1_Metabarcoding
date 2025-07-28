@@ -13,7 +13,8 @@ source(here::here("src", "libraries.R"))
 
 Permanova <- function(data_path, file_name) {
      
-     load(here::here(data_path, file_name))
+     loaded_name <- load(here::here(data_path, file_name))
+     ps <- get(loaded_name)
      
      # Data processing pipeline
      exclude_groups <-  c("Roots_Carex_OSPW",
@@ -49,12 +50,12 @@ Permanova <- function(data_path, file_name) {
      }
 
 # Process all datasets
-Bac_solid <- Permanova("data/16s_sed/", "ps_16S_Sed.RData")
-Bac_water <- Permanova("data/16s_wat/", "ps_16S_Wat.RData")
+Bac_solid <- Permanova("data/16s_sed/", "ps_Bac_Sed.RData")
+Bac_water <- Permanova("data/16s_wat/", "ps_Bac_Wat.RData")
 Fun_solid <- Permanova("data/its_sed/", "ps_fungi.RData")
 Euk_water <- Permanova("data/18s_wat/", "ps_18S_Wat.RData")
 
-
+Bac_water$Permanova_Time
 
 ##### Pairwise Permanova ####
 
@@ -71,7 +72,8 @@ extract_p_values <- function(result) {
 # Pairwise permanova function
 PW_Permanova <- function(data_path, file_name, factor){
      
-     load(here::here(data_path, file_name))
+     loaded_name <- load(here::here(data_path, file_name))
+     ps <- get(loaded_name)
 
      # Data processing pipeline
      exclude_groups <-  c("Roots_Carex_OSPW",
@@ -106,11 +108,11 @@ PW_Permanova <- function(data_path, file_name, factor){
      return(list(pairwise_results=pairwise_results))
      }
 
-Bac_solid_time <- PW_Permanova("data/16s_sed/", "ps_16S_Sed.RData","Time")
-Bac_solid_stype <- PW_Permanova("data/16s_sed/", "ps_16S_Sed.RData","Group")
+Bac_solid_time <- PW_Permanova("data/16s_sed/", "ps_Bac_Sed.RData","Time")
+Bac_solid_stype <- PW_Permanova("data/16s_sed/", "ps_Bac_Sed.RData","Group")
 
-Bac_water_time <- PW_Permanova("data/16s_wat/", "ps_16S_Wat.RData","Time")
-Bac_water_stype <- PW_Permanova("data/16s_wat/", "ps_16S_Wat.RData","Group")
+Bac_water_time <- PW_Permanova("data/16s_wat/", "ps_Bac_Wat.RData","Time")
+Bac_water_stype <- PW_Permanova("data/16s_wat/", "ps_Bac_Wat.RData","Group")
 
 Fun_solid_time <- PW_Permanova("data/its_sed/", "ps_fungi.RData","Time")
 Fun_solid_stype <- PW_Permanova("data/its_sed/", "ps_fungi.RData","Group")
@@ -121,7 +123,7 @@ Euk_water_group <- PW_Permanova("data/18s_wat/", "ps_18S_Wat.RData","Group")
 
 #### Indicator species #### 
 
-load(here(data_path,"ps_16S_Sed.RData"))
+load(here(data_path,"ps_Bac_Sed.RData"))
 
 ## Optional 
 ps_sub <- subset_samples(ps,Group=="Rhizosphere_Carex_OSPW"|Group=="Sediments_No_plant_OSPW")
