@@ -8,8 +8,6 @@
 source(here::here("src", "libraries.R"))
 
 
-
-
 #### 16S solid samples  #####
 
 data_path <- here("data/16s_sed/")
@@ -257,8 +255,10 @@ Sdata <- sample_data(meta_merged)
 
 ps <- phyloseq(ASV_ab,Tax,Sdata)
 ps
-
 save(ps, file = here(data_path,"ps_16S_Sed.RData"))
+
+ps_bac <- subset_taxa(ps,Domain=="Bacteria")
+save(ps_bac, file = here(data_path,"ps_Bac_Sed.RData"))
 
 
 ### Repeat for other datasets. 
@@ -267,7 +267,6 @@ save(ps, file = here(data_path,"ps_16S_Sed.RData"))
 ##____####
 #### ITS solid samples  #####
 
-data_path <- here("data/16s_sed/")
 data_path <- here("data/its_sed/")
 list.files(path=data_path)
 
@@ -721,6 +720,7 @@ Sdata <- sample_data(meta_clean)
 
 ps <- phyloseq(ASV_ab,Tax,Sdata)
 ps
+
 # 58 samples, 2868 taxa
 
 names <- as.data.frame(sample_data(ps))
@@ -734,4 +734,6 @@ ps<- prune_taxa(taxa_sums(ps)>0, ps)
 
 save(ps, file = here(data_path,"ps_16S_Wat.RData"))
 
+ps_bac <- subset_taxa(ps,Domain=="Bacteria")
+save(ps_bac, file = here(data_path,"ps_Bac_Wat.RData"))
 
