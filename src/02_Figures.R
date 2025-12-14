@@ -55,7 +55,7 @@ NA_CONC <- ggplot(metadata_sub, aes(x=Time,y=NA_concentration,fill=Group))+
 
 
 ggsave(NA_CONC,device='svg',height = 6, width = 15,
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/NA_CONC.svg")
+       filename=here("Figures/NA_concentration.svg"))
 
 
 #  metadata_sub$Group <- factor(metadata_sub$Group, levels = c("Sediments_No_plant_Artificial_OSPW","Sediments_No_plant_OSPW","Sediments_Carex_OSPW"), labels = c("LPW","OSPW","Carex OSPW "))
@@ -94,7 +94,46 @@ Beta_div_Ordination <- function(data_path, file_name) {
     # 
 
     # Ordination analysis
-    ps_dist <- microbiome::transform(ps_sub, "rclr")
+    
+    rclr_phyloseq <- function(ps) {
+        # Vérifier phyloseq
+        if (!inherits(ps, "phyloseq")) stop("Object needs to be of phyloseq type")
+        
+        # Extract OTU table from phyloseq_object
+        otu <- as.matrix(otu_table(ps))
+        
+        # Apply rCLR per column (sample)
+        
+        rclr_fun <- function(x) {
+            pos <- x > 0
+            if (any(pos)) {
+                mu <- mean(log(x[pos]))
+                out <- numeric(length(x))
+                out[pos] <- log(x[pos]) - mu
+                out[!pos] <- 0 
+            } else {
+                out <- rep(0, length(x))  # if all values = 0
+            }
+            return(out)
+        }
+        
+        # Apply rCLR par column (2)
+        otu_rclr <- apply(otu, 2, rclr_fun)
+        
+        # Restore names of rows and columns (as.matrix loses the row names)
+        rownames(otu_rclr) <- rownames(otu)
+        colnames(otu_rclr) <- colnames(otu)
+        
+        # Put that new  otu table back into the phyloseq object.
+        otu_table(ps) <- otu_table(otu_rclr, taxa_are_rows = TRUE)
+        
+        return(ps)
+    }
+    
+    ps_dist<- rclr_phyloseq(ps_sub)
+    
+    
+   # ps_dist <- microbiome::transform(ps_sub, "rclr")
     ord_rclr <- phyloseq::ordinate(ps_dist, "PCoA", distance = "euclidean")
     
     # Calculate variance explained
@@ -170,7 +209,7 @@ Beta_stype <- ggarrange(plot(Bac_solid$plot_stype),
 
 
 ggsave(Beta_stype,device='svg',height = 10, width = 18 ,
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Beta_stype2.svg")
+       filename=here("Figures/Beta_stype.svg"))
 
 
 
@@ -311,13 +350,13 @@ Relative_Abundance <- function(data_path, file_name,label,dataset) {
         facet_grid(~ Time , scales = "fixed")+
         theme(title = element_text(size = 22),
               #ggh4x.facet.nestline = element_line(color = "black"), 
-              strip.text = element_text(face="bold",size=15),
+              strip.text = element_text(face="bold",size=24),
               strip.background = element_rect(color="black",fill="white"),
-              axis.title = element_text(size = 16),
-              axis.text.x = element_text(size = 14, angle = 40,hjust=1),
-              axis.text.y = element_text(size = 15, angle = 90, hjust = 0.5),
-              legend.title = element_text(size = 18),
-              legend.text = element_text(size = 15, face = "italic"),
+              axis.title = element_text(size = 24),
+              axis.text.x = element_text(size = 20, angle = 40,hjust=1),
+              axis.text.y = element_text(size = 20, angle = 90, hjust = 0.5),
+              legend.title = element_text(size = 24),
+              legend.text = element_text(size = 20, face = "italic"),
               legend.background = element_rect(color = "black"),
         )+
         guides(fill=guide_legend(ncol=1))+
@@ -347,7 +386,22 @@ Relab_plot <- ggarrange(plot(Bac_solid$Barplot),
                         plot(Euk_water$Barplot),labels="AUTO")
 
 ggsave(Relab_plot,device='svg',height = 15, width = 15 ,
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Relab_plot2.svg")
+       filename=here("Figures/Relab_plot_with_euk.svg"))
+
+
+
+
+Relab_plot_no18S <- ggarrange(plot(Bac_solid$Barplot),
+                        plot(Bac_water$Barplot),
+                        plot(Fun_solid$Barplot),
+                        ncol=1,
+                        labels="AUTO",
+                        font.label = list(size = 20, color = "black", face = "bold", family = NULL))
+
+ggsave(Relab_plot_no18S,device='svg',
+       height = 25, width = 14,
+       filename=here("Figures/Relab_plot_no_euk.svg"))
+
 
 
 
@@ -356,13 +410,14 @@ ggsave(Relab_plot,device='svg',height = 15, width = 15 ,
 
 #### Figure 4  - Taxa correlation with final NA concentration####
 
+
 Cor_taxa <- function(data_path, file_name,taxa,taxo_lvl) {
     
     # Load phyloseq object
     loaded_name <- load(here::here(data_path, file_name))
     ps <- get(loaded_name)
     
-    metadata <- read.csv(file = paste0(data_path,"/NA_predict.csv"), 
+    metadata <- read.csv(file = paste0(data_path,"NA_predict.csv"), 
                          dec = ".", header = T, row.names = 1, sep = ";", 
                          comment.char = "") 
     
@@ -371,13 +426,48 @@ Cor_taxa <- function(data_path, file_name,taxa,taxo_lvl) {
                          "Sediments_Carex_OSPW",
                          "Sediments_No_plant_Artificial_OSPW",
                          "No_plant_Artificial_OSPW")
-   
+    
     ps_sub <- prune_samples(!(sample_data(ps)$Group %in% exclude_groups), ps)
     ps_sub <- prune_taxa(taxa_sums(ps_sub) > 0, ps_sub)
     
-    ps_rclr <- microbiome::transform(ps_sub, "rclr") 
+    rclr_phyloseq <- function(ps) {
+        # Vérifier phyloseq
+        if (!inherits(ps, "phyloseq")) stop("Object needs to be of phyloseq type")
+        
+        # Extract OTU table from phyloseq_object
+        otu <- as.matrix(otu_table(ps))
+        
+        # Apply rCLR per column (sample)
+        
+        rclr_fun <- function(x) {
+            pos <- x > 0
+            if (any(pos)) {
+                mu <- mean(log(x[pos]))
+                out <- numeric(length(x))
+                out[pos] <- log(x[pos]) - mu
+                out[!pos] <- 0 
+            } else {
+                out <- rep(0, length(x))  # if all values = 0
+            }
+            return(out)
+        }
+        
+        # Apply rCLR par column (2)
+        otu_rclr <- apply(otu, 2, rclr_fun)
+        
+        # Restore names of rows and columns (as.matrix loses the row names)
+        rownames(otu_rclr) <- rownames(otu)
+        colnames(otu_rclr) <- colnames(otu)
+        
+        # Put that new  otu table back into the phyloseq object.
+        otu_table(ps) <- otu_table(otu_rclr, taxa_are_rows = TRUE)
+        
+        return(ps)
+    }
+    
+    ps_rclr <- rclr_phyloseq(ps_sub)
     ps <- ps_rclr
-    sample_data(ps) <- metadata
+    sample_data(ps) <- metadata #This metadata contains the final NA concentration for each sample / dates 
     
     # Get logical vector of taxa matching your criteria
     taxa_to_keep <- taxa_names(ps)[tax_table(ps)[, taxo_lvl] == taxa]
@@ -433,44 +523,48 @@ Cor_taxa <- function(data_path, file_name,taxa,taxo_lvl) {
     
 }
 
+
+
+
+
 ##### » Bac sed ####
 
-#Clostridia <- Cor_taxa("data/16s_sed/", "ps_16S_Sed.RData","Clostridia","Class")
+Clostridia <- Cor_taxa("data/16s_sed/", "ps_16S_Sed.RData","Clostridia","Class")
 # Signif at D28
 
-#Clostridiales <- Cor_taxa("data/16s_sed/", "ps_16S_Sed.RData","Clostridiales","Order")
+Clostridiales <- Cor_taxa("data/16s_sed/", "ps_16S_Sed.RData","Clostridiales","Order")
 # Non signif
+
+Clostridiaceae <- Cor_taxa("data/16s_sed/", "ps_16S_Sed.RData","Clostridiaceae","Family")
+# Non-signif
 
 Hungate <- Cor_taxa("data/16s_sed/", "ps_16S_Sed.RData","Hungateiclostridiaceae","Family")
 # Non signif, almost at D8
 
-#Christensenellaceae <- Cor_taxa("data/16s_sed/", "ps_16S_Sed.RData","Christensenellaceae","Family")
+Christensenellaceae <- Cor_taxa("data/16s_sed/", "ps_16S_Sed.RData","Christensenellaceae","Family")
 # Signif at D28
-
-#Clostridiaceae <- Cor_taxa("data/16s_sed/", "ps_16S_Sed.RData","Clostridiaceae","Family")
-# Non-signif
 
 Dechlo <- Cor_taxa("data/16s_sed/", "ps_16S_Sed.RData","Dechloromonas","Genus")
 # signif D8 - D28 - D42
 
-#Anaero <- Cor_taxa("data/16s_sed/", "ps_16S_Sed.RData","Anaerovorax","Genus")
+Anaero <- Cor_taxa("data/16s_sed/", "ps_16S_Sed.RData","Anaerovorax","Genus")
 # Non-signif
 
 
 ##### » Fungi sed ####
 Morti <- Cor_taxa("data/its_sed/", "ps_fungi.RData","Mortierellaceae","Family")
-# signif D28 - D42
+# signif D28 
 
 Didymellaceae <- Cor_taxa("data/its_sed/", "ps_fungi.RData","Didymellaceae","Family")
 # signif D42
 
-#Calophoma <- Cor_taxa("data/its_sed/", "ps_fungi.RData","Calophoma","Genus")
+Calophoma <- Cor_taxa("data/its_sed/", "ps_fungi.RData","Calophoma","Genus")
 # signif D42
 
-#Oidiodendron <- Cor_taxa("data/its_sed/", "ps_fungi.RData","Oidiodendron","Genus")
+Oidiodendron <- Cor_taxa("data/its_sed/", "ps_fungi.RData","Oidiodendron","Genus")
 # signif D28
 
-#Leptodontidium <- Cor_taxa("data/its_sed/", "ps_fungi.RData","Leptodontidium","Genus")
+Leptodontidium <- Cor_taxa("data/its_sed/", "ps_fungi.RData","Leptodontidium","Genus")
 # non-signif
 
 #Pezoloma <- Cor_taxa("data/its_sed/", "ps_fungi.RData","Pezoloma","Genus")
@@ -514,8 +608,167 @@ Figure_4 <- ggarrange(Bac_sed_cor,
                       nrow=3)
 
 
-ggsave(Figure_4,device='svg',height = 20, width = 20 ,
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Cor_taxa_v2.svg")
+ggsave(Figure_4,device='svg',
+       height = 25, width = 22,
+       filename=here("Figures/Taxa_Cor_FinalNA.svg"))
+
+
+
+###____####
+#### Figure 4" - Relative Abundance of correlated taxa ####
+
+source(here::here("src", "libraries.R"))
+
+Relative_Abundance_Cor <- function(data_path, file_name,taxa,tax_lvl){
+    
+    # Load phyloseq object
+    loaded_name <- load(here::here(data_path, file_name))
+    ps <- get(loaded_name)
+
+        # Data processing pipeline
+    exclude_groups <-  c("Roots_Carex_OSPW",
+                         "Sediments_Carex_OSPW",
+                         "Sediments_No_plant_Artificial_OSPW",
+                         "No_plant_Artificial_OSPW")
+    
+    # Groups that are not of interest for the plot are removed 
+    ps_sub <- prune_samples(!(sample_data(ps)$Group %in% exclude_groups), ps)
+    ps_sub <- prune_taxa(taxa_sums(ps_sub) > 0, ps_sub)
+    
+    ps_glom <- tax_glom(ps_sub, taxrank = tax_lvl)
+    
+    # Transform to long format for plotting purposes
+    ps_long <- psmelt(ps_glom)
+    
+    # Group by different columns and compute the mean and relative mean (mean across replicates)
+    ps_mean <-  ps_long %>%
+        group_by(Group, Time,Compartment,Water_type, Sample_type, !!sym(tax_lvl)) %>%
+        summarise(Mean = mean(Abundance, na.rm = TRUE))%>%
+        mutate(Relative_Mean = Mean / sum(Mean))
+    
+    ps_tax <- ps_mean[ ps_mean[[tax_lvl]] == taxa , ]    
+    
+    # Rename categories for plotting purposes
+    
+    
+    if (file_name == "ps_Bac_Sed.RData" | file_name=="ps_fungi.RData") {
+        # For the sediments datasets
+        ps_tax$Group <- factor(ps_tax$Group,
+                                    levels=c("Roots_Carex_OSPW","Rhizosphere_Carex_OSPW","Sediments_Carex_OSPW","Sediments_No_plant_OSPW","Sediments_No_plant_Artificial_OSPW"),
+                                    labels=c("Carex Ro.","Carex Rh.","Carex Sed.","Unplanted Sed.","LPW Sed."))
+        
+    } else {
+        # For the water datasets
+        ps_tax$Group <- factor(ps_tax$Group,
+                                    levels=c("Carex_OSPW","No_plant_OSPW","No_plant_Artificial_OSPW"),
+                                    labels=c("Carex OSPW","Unplanted OSPW","LPW"))
+        
+    }
+    
+    
+    if (file_name == "ps_Bac_Sed.RData"&tax_lvl=="Family") {
+        Legend_col=c("#00a5cf")
+        Rel_ab_limits=c(0,0.1)
+        
+    }else if (file_name == "ps_Bac_Sed.RData"&tax_lvl=="Genus") {
+        Legend_col=c("#B7E1DE")
+        Rel_ab_limits=c(0,0.045)
+        
+    } else if (file_name == "ps_fungi.RData"&taxa=="Mortierellaceae") {
+        Legend_col=c("#a4161a")
+        Rel_ab_limits=c(0,0.03)
+        
+    } else if (file_name == "ps_fungi.RData"&taxa=="Didymellaceae") {
+        Legend_col=c("#0a9396ff")
+        Rel_ab_limits=c(0,0.02)
+        
+    } else if (file_name == "ps_Bac_Wat.RData"&taxa=="Gemmataceae") {
+        Legend_col=c("#b56576")
+        Rel_ab_limits=c(0,0.012)
+        
+    } else if (file_name == "ps_Bac_Wat.RData"&taxa=="Isosphaeraceae") {
+        Legend_col=c("#6E3541")
+        Rel_ab_limits=c(0,0.075)
+    
+    } else print("Dataset not recognized")
+    
+    Barplot <- ggplot(ps_tax, aes(x = Group, y = Relative_Mean, fill = .data[[tax_lvl]])) +
+        geom_bar(stat = "identity") +
+        theme_bw() +
+        facet_grid(~ Time , scales = "fixed")+
+        theme(title = element_text(size = 22),
+              #ggh4x.facet.nestline = element_line(color = "black"), 
+              strip.text = element_text(face="bold",size=24),
+              strip.background = element_rect(color="black",fill="white"),
+              axis.title = element_text(size = 24),
+              axis.text.x = element_text(size = 20, angle = 40,hjust=1),
+              axis.text.y = element_text(size = 20, angle = 90, hjust = 0.5),
+              legend.position = "none",
+              #legend.title = element_text(size = 24),
+              #legend.text = element_text(size = 20, face = "italic"),
+              #legend.background = element_rect(color = "black"),
+        )+
+        #guides(fill=guide_legend(ncol=1))+
+        labs(title=taxa,fill = taxa, x="")+
+        scale_y_continuous(labels = scales::percent,limits=Rel_ab_limits,expand = expansion(mult = c(0, 0.01))) +
+        scale_fill_manual(values = Legend_col) +  # Use the dynamically selected palette
+        ylab("Relative abundance")
+    
+    Barplot
+    return(list(Barplot = Barplot))
+    
+}
+
+
+Hungate_relab <- Relative_Abundance_Cor(data_path="data/16s_sed/", 
+                                        file_name= "ps_Bac_Sed.RData",
+                                        taxa="Hungateiclostridiaceae",
+                                        tax_lvl="Family")
+
+Dechlo_relab <- Relative_Abundance_Cor(data_path="data/16s_sed/", 
+                                        file_name= "ps_Bac_Sed.RData",
+                                        taxa="Dechloromonas",
+                                        tax_lvl="Genus")
+
+Gemma_relab <- Relative_Abundance_Cor(data_path="data/16s_wat/", 
+                                      file_name= "ps_Bac_Wat.RData",
+                                      taxa="Gemmataceae",
+                                      tax_lvl="Family")
+
+Iso_relab <- Relative_Abundance_Cor(data_path="data/16s_wat/", 
+                                      file_name= "ps_Bac_Wat.RData",
+                                      taxa="Isosphaeraceae",
+                                      tax_lvl="Family")
+
+Morti_relab <- Relative_Abundance_Cor(data_path="data/its_sed/", 
+                                      file_name= "ps_fungi.RData",
+                                      taxa="Mortierellaceae",
+                                      tax_lvl="Family")
+
+Didy_relab <- Relative_Abundance_Cor(data_path="data/its_sed/", 
+                                    file_name= "ps_fungi.RData",
+                                    taxa="Didymellaceae",
+                                    tax_lvl="Family")
+
+
+# Arrange all the figures in one plot
+Relab_cor_plots <- ggarrange(plot(Hungate_relab$Barplot),
+                        plot(Dechlo_relab$Barplot),
+                        plot(Gemma_relab$Barplot),
+                        plot(Iso_relab$Barplot),
+                        plot(Morti_relab$Barplot),
+                        plot(Didy_relab$Barplot),
+                        ncol=2,
+                        nrow=3,
+                        labels="AUTO",
+                        font.label = list(size = 20, color = "black", face = "bold", family = NULL))
+
+
+ggsave(Relab_cor_plots,device='svg',
+       height = 25, width = 20,
+       filename=here("Figures/Relab_Cor_Taxa.svg"))
+
+
 
 
 
@@ -701,17 +954,18 @@ Primary_response <- ggarrange(Bac_rhizo,Bac_NoPlant,
                               ncol=2,nrow=3)
 
 ggsave(Primary_response,device='svg',height = 19, width = 15,
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/AAA_community_change.svg")
+       filename=here("Figures/Bac&Fun_community_change.svg"))
 
 
 
 Primary_response2 <- ggarrange(Bac_rhizo,Bac_NoPlant,
-                               Bac_Carex_OSPW,Bac_NoPlant_OSPW,
+                               Bac_Carex_OSPW,
+                               Bac_NoPlant_OSPW,
                                labels = "AUTO",
                                ncol=2,nrow=2)
 
 ggsave(Primary_response2,device='svg',height = 15, width = 15,
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/AAB_community_change.svg")
+       filename=here("Figures/BAC_community_change.svg"))
 
 
 ####____####
@@ -807,26 +1061,26 @@ Sed_Bac_nonRar <- Alpha.div.Stype("data/16s_sed/", "ps_Bac_Sed.RData",rarefactio
 Sed_Bac_Rar <- Alpha.div.Stype("data/16s_sed/", "ps_Bac_Sed.RData",rarefaction=T)
 
 ggsave(Sed_Bac_nonRar,device='svg',height = 8, width = 12 ,
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Alpha_Bac_Sed.svg")
+       filename=here("Figures/Alpha_Bac_Sed.svg"))
 
 Sed_Fun_nonRar <- Alpha.div.Stype("data/its_sed/", "ps_fungi.RData",rarefaction=F)
 Sed_Fun_Rar <- Alpha.div.Stype("data/its_sed/", "ps_fungi.RData",rarefaction=T)
 
 ggsave(Sed_Fun_nonRar,device='svg',height = 8, width = 12,
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Alpha_Fun_Sed.svg")
+       filename=here("Figures/Alpha_Fun_Sed.svg"))
 
 Wat_Bac_nonRar <- Alpha.div.Stype("data/16s_wat/", "ps_Bac_Wat.RData",rarefaction=F)
 Wat_Bac_Rar <- Alpha.div.Stype("data/16s_wat/", "ps_Bac_Wat.RData",rarefaction=T)
 
 ggsave(Wat_Bac_nonRar,device='svg',height = 8, width = 12,
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Alpha_Bac_Wat.svg")
+       filename=here("Figures/Alpha_Bac_Wat.svg"))
 
 
 Wat_Euk_nonRar <- Alpha.div.Stype("data/18s_wat/", "ps_18S_Wat.RData",rarefaction=F)
 Wat_Euk_Rar <- Alpha.div.Stype("data/18s_wat/", "ps_18S_Wat.RData",rarefaction=T)
 
 ggsave(Wat_Euk_nonRar,device='svg',height = 8, width = 12,
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Alpha_Euk_Wat.svg")
+       filename=here("Figures/Alpha_Euk_Wat.svg"))
 
 
 Alpha.div.Time <- function(data_path, file_name, rarefaction=FALSE) {
@@ -921,26 +1175,26 @@ Sed_Bac_nonRar <- Alpha.div.Time("data/16s_sed/", "ps_Bac_Sed.RData",rarefaction
 Sed_Bac_Rar <- Alpha.div.Time("data/16s_sed/", "ps_Bac_Sed.RData",rarefaction=T)
 
 ggsave(Sed_Bac_nonRar,device='svg',height = 8, width = 12 ,
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Alpha_Bac_Sed_Time.svg")
+       filename=here("Figures/Alpha_Bac_Sed_Time.svg"))
 
 Sed_Fun_nonRar <- Alpha.div.Time("data/its_sed/", "ps_fungi.RData",rarefaction=F)
 Sed_Fun_Rar <- Alpha.div.Time("data/its_sed/", "ps_fungi.RData",rarefaction=T)
 
 ggsave(Sed_Fun_nonRar,device='svg',height = 8, width = 12,
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Alpha_Fun_Sed_Time.svg")
+       filename=here("Figures/Alpha_Fun_Sed_Time.svg"))
 
 Wat_Bac_nonRar <- Alpha.div.Time("data/16s_wat/", "ps_Bac_Wat.RData",rarefaction=F)
 Wat_Bac_Rar <- Alpha.div.Time("data/16s_wat/", "ps_Bac_Wat.RData",rarefaction=T)
 
 ggsave(Wat_Bac_nonRar,device='svg',height = 8, width = 12,
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Alpha_Bac_Wat_Time.svg")
+       filename=here("Figures/Alpha_Bac_Wat_Time.svg"))
 
 
 Wat_Euk_nonRar <- Alpha.div.Time("data/18s_wat/", "ps_18S_Wat.RData",rarefaction=F)
 Wat_Euk_Rar <- Alpha.div.Time("data/18s_wat/", "ps_18S_Wat.RData",rarefaction=T)
 
 ggsave(Wat_Euk_nonRar,device='svg',height = 8, width = 12,
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Alpha_Euk_Wat_Time.svg")
+       filename=here("Figures/Alpha_Euk_Wat_Time.svg"))
 
 
 #### Figure S9 and S10 - Beta div with roots ####
@@ -1022,14 +1276,14 @@ Fun_solid <- Beta_div_Ordination("data/its_sed/", "ps_fungi.RData")
 Bac_solid$plot_stype
 
 ggsave(Bac_solid$plot_stype,device='svg',height = 10, width = 18 ,
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Beta_Bac_roots.svg")
+       filename=here("Figures/Beta_Bac_roots.svg"))
 
 
 Fun_solid$plot_stype
 
 
 ggsave(Fun_solid$plot_stype,device='svg',height = 10, width = 18 ,
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Beta_Fun_roots.svg")
+       filename=here("Figures/Beta_Fun_roots.svg"))
 
 
 
@@ -1176,7 +1430,7 @@ Bac_solid_Change_Time <- ggarrange(BacSolidCompTime$`D-0`,BacSolidCompTime$D8,
      
 
 ggsave(Bac_solid_Change_Time,device='svg', height = 15, width = 20, 
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Change_time_bac_solid.svg")
+       filename=here("Figures/Change_time_bac_solid.svg"))
 
 
 
@@ -1192,7 +1446,7 @@ Bac_Water_Change_Time <- ggarrange(BacWaterCompTime$`D-0`,BacWaterCompTime$D8,
 
 
 ggsave(Bac_Water_Change_Time,device='svg', height = 15, width = 20, 
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Change_time_bac_Water.svg")
+       filename=here("Figures/Change_time_bac_Water.svg"))
 
 
 
@@ -1209,7 +1463,7 @@ Fun_solid_Change_Time <- ggarrange(FunSolidCompTime$`D-0`,FunSolidCompTime$D8,
 
 
 ggsave(Fun_solid_Change_Time,device='svg', height = 15, width = 20, 
-       filename="/Users/Simon/OneDrive - INRS/Documents/INRS/Research_projects/Projet_GROW/Meso1_metabarcoding/Manuscripts/Figures/Change_time_Fun_solid.svg")
+       filename=here("Figures/Change_time_Fun_solid.svg"))
 
 
 
